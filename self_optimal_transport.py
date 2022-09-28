@@ -1,3 +1,8 @@
+""" This method is borrowed from "The Self-Optimal-Transport Feature Transform" 
+introduced by Shalam & Korman, Apr 2022. (https://arxiv.org/abs/2204.03065)
+
+Code adopted from https://github.com/DanielShalam/SOT
+"""
 import torch
 import math
 
