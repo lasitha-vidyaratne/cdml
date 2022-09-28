@@ -215,18 +215,6 @@ class MyMetaLearner(MetaLearner):
                 y_test, False, num_ways, True)
             preds = torch.argmax(out, dim=1).cpu().numpy()
 
-            # self.meta_learner.apply(apply_dropout)
-            # all_outs = []
-            # for i in range(30):
-            #     self.meta_learner.apply(apply_dropout)
-            #     out, _ = self.compute_out_and_loss(X_train, y_train, X_test, y_test, False, num_ways, True)
-            #     print(out)
-            #     all_outs.append(out)
-            #     preds = torch.argmax(out, dim=1).cpu().numpy()
-            # print(' ')
-            # all_outs = torch.stack(all_outs, dim=2)
-            # out = torch.mean(all_outs, dim=2)
-
             # Log iteration
             self.log(task, out.cpu().numpy(), meta_train=False)
             
@@ -349,39 +337,6 @@ class MyLearner(Learner):
         X_train_cont, y_train_cont = copy.deepcopy(X_train), copy.deepcopy(y_train)
         X_train, y_train = X_train.to(self.dev), y_train.to(self.dev)
 
-        #X_train, y_train = X_train, y_train
-        
-        # train_set = torch.utils.data.TensorDataset(X_train_cont, y_train_cont)
-        # train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=n_ways * k, shuffle=True)
-        # optimizer = torch.optim.Adam(self.learner.parameters(), lr=3e-4)
-
-        # miner = miners.MultiSimilarityMiner()
-        # loss_func = losses.TripletMarginLoss()
-        # train_epochs = 20
-        # for epoch in range(0, train_epochs):
-        #     train_loss = 0
-        #     for i, batch in enumerate(train_dataloader):
-                
-        #         X_train_cont, y_train_cont = batch
-        #         X_train_cont = X_train_cont.to(self.dev)
-        #         y_train_cont = y_train_cont.to(self.dev)
-
-        #         optimizer.zero_grad()
-
-        #         weights = [p.clone().detach().to(self.dev) for p in self.learner.parameters()]
-        #         feature = self.learner.forward_weights(X_train_cont, weights, embedding=True)
-
-        #         hard_pairs = miner(feature, y_train_cont)
-        #         #print(feature)
-        #         loss = loss_func(feature, y_train_cont, hard_pairs)
-        #         loss.requires_grad = True
-        #         print('Loss:',loss)
-        #         train_loss += loss.item()
-        #         loss.backward()
-        #         optimizer.step()
-
-        #     print('epoch [{}/{}], contrastive loss: {:.6f}'.format(epoch+1, train_epochs, train_loss))
-        
         with torch.no_grad():
             prototypes = process_support_set(self.learner, self.weights, 
                 X_train, y_train, n_ways)
@@ -456,7 +411,6 @@ class MyPredictor(Predictor):
         self.weights = weights
         self.dev = dev
         self.prototypes = prototypes
-        #self.other = [supp_x, supp_y, n, k]
 
     def predict(self, query_set: torch.Tensor) -> np.ndarray:
         """ Given a query_set, predicts the probabilities associated to the 
@@ -476,45 +430,7 @@ class MyPredictor(Predictor):
                 - Predicted labels. The array must be of shape 
                     [n_ways*query_size].
         """
-        # query_set = query_set
-        # supp_x, supp_y, n, k = self.other
-        # supp_x = supp_x[supp_y.sort()[1]]
-        # supp_y_sorted, _ = supp_y.sort()
-        # end = supp_x.size(0)
-        # x = torch.cat([supp_x, query_set]).to(self.dev)
-
-        # weights = [p.clone().detach().to(self.dev) for p in self.model.parameters()]
-        # feature = self.model.forward_weights(x, weights, embedding=True)
-
-        # #x = torch.nn.functional.normalize(feature, dim=1)
-        # x  = whiten(x)
-        # self.optimal = SOT(distance_metric='cosine')
-        # print(x.shape)
-        # x = self.optimal(x.to(self.dev), y_support = supp_y_sorted.to(self.dev))
-
-        # with torch.no_grad():
-        #     self.prototypes = process_support_set_2(self.model, self.weights, x[:end], supp_y, n)
-
-        # X_test = x[end:].to(self.dev)
-        # with torch.no_grad():
-        #     out = process_query_set_2(self.model, self.weights, X_test, 
-        #         self.prototypes)
-        #     probs = F.softmax(out, dim=1).cpu().numpy()
-
-
-        # self.model.apply(apply_dropout)
         X_test = query_set.to(self.dev)
-        # all_outs = []
-        # with torch.no_grad():
-        #     for i in range(30):
-
-        #         out = process_query_set(self.model, self.weights, X_test, self.prototypes)
-        #         all_outs.append(out)
-            
-        #     all_outs = torch.stack(all_outs, dim=2)
-        #     out = torch.mean(all_outs, dim=2)
-        #     probs = F.softmax(out, dim=1).cpu().numpy()
-
         with torch.no_grad():
             out = process_query_set(self.model, self.weights, X_test, 
                 self.prototypes)
