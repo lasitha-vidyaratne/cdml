@@ -13,8 +13,8 @@ import pickle
 import time
 import random
 
-TIME_LIMIT = 9 * 60 * 60 # time limit of the whole process in seconds ~ 4.7 hrs
-TIME_TRAIN = TIME_LIMIT - 24500 # set aside 30min for test
+TIME_LIMIT = 27500 # time limit of the whole process in seconds ~ 4+ hrs
+TIME_TRAIN = TIME_LIMIT - 60*60 # set aside 30min for test
 t1 = time.time()
 
 import os
@@ -45,14 +45,12 @@ try:
 except:
     os.system("pip install timm")
 
-# try: 
-#     import pytorch_metric_learning
-# except:
-#     os.system("pip install pytorch-metric-learning")
-# print('Installs done')
-from utils import  get_logger, timer, resize_tensor, augment, decode_label, mean
-from self_optimal_transport import SOT
-# print('Utils done')
+try: 
+    import pytorch_metric_learning
+except:
+    os.system("pip install pytorch-metric-learning")
+
+from utils import get_logger, timer, resize_tensor, augment, decode_label, mean
 from api import MetaLearner, Learner, Predictor
 from backbone import MLP, rn_timm_mix, Wrapper
 from torch import optim
@@ -117,11 +115,7 @@ class MyMetaLearner(MetaLearner):
         self.timer = timer()
         self.timer.initialize(time.time(), TIME_TRAIN - time.time() + t1)
         self.timer.begin('load pretrained model')
-        self.model = Wrapper(rn_timm_mix(True, 'seresnextaa101d_32x8d', #'swsl_resnet50', 
-            0.1)).to(DEVICE)
-        self.model2 = Wrapper(rn_timm_mix(True, 'seresnextaa101d_32x8d', #'swsl_resnet50', 
-            0.1)).to(DEVICE)
-        self.model3 = Wrapper(rn_timm_mix(True, 'seresnext50_32x4d', #'swsl_resnet50', 
+        self.model = Wrapper(rn_timm_mix(True, 'seresnext50_32x4d', #'seresnext101_32x8d', #'swsl_resnet50', 
             0.1)).to(DEVICE)
 
         times = self.timer.end('load pretrained model')
@@ -174,7 +168,7 @@ class MyMetaLearner(MetaLearner):
             valid_task.append([torch.cat([resize_tensor(supp_x, 224), 
                 resize_tensor(quer_x, 224)]), quer_y])
 
-        # loop until time runs out
+        # # loop until time runs out
         total_epoch = 0
 
         loss_func = losses.TripletMarginLoss()
@@ -197,12 +191,10 @@ class MyMetaLearner(MetaLearner):
                 acc_valid))
 
         best_valid = acc_valid
-        second_best_valid = None
         best_param = pickle.dumps(self.model.state_dict())
-        initial_param = pickle.dumps(self.model.state_dict())
-        second_best_param = pickle.dumps(self.model.state_dict())
-        # best_train_param = pickle.dumps(self.model.state_dict())
-        best_acc = 0
+
+        #best_loss = 100
+        #best_param = pickle.dumps(self.model.state_dict())
 
         self.cls.train()
         while self.timer.time_left() > 60 * 5:
@@ -216,6 +208,7 @@ class MyMetaLearner(MetaLearner):
                 for i, batch in enumerate(meta_train_generator(10)):
                     self.timer.begin('train data loading')
                     X_train, y_train = batch
+                    # print(y_train)
                     X_train = augment(X_train)
                     X_train = resize_tensor(X_train, 224)
                     X_train = X_train.to(DEVICE)
@@ -226,13 +219,12 @@ class MyMetaLearner(MetaLearner):
                     feature = self.model(X_train)
                     logit = self.cls(feature)
 
-                    class_loss = F.cross_entropy(logit, y_train) / 10.
+                    class_loss = 2*F.cross_entropy(logit, y_train) / 10.
 
                     hard_pairs = miner(feature, y_train)
-                    contrastive_loss = loss_func(feature, y_train, hard_pairs)
+                    contrastive_loss = loss_func(feature, y_train, hard_pairs) * 10
                     print(class_loss, contrastive_loss)
-                    loss = 2*class_loss + 10*contrastive_loss
-
+                    loss = class_loss + contrastive_loss
                     self.timer.end('train forward')
 
                     self.timer.begin('train backward')
@@ -243,8 +235,6 @@ class MyMetaLearner(MetaLearner):
                     acc += logit.argmax(1).eq(y_train).float().mean()
 
                 backbone_parameters = []
-                backbone_parameters.extend(
-                    self.model.set_get_trainable_parameters([3, 4]))
                 torch.nn.utils.clip_grad.clip_grad_norm_(backbone_parameters + 
                     list(self.cls.parameters()), max_norm=5.0)
                 self.opt.step()
@@ -258,9 +248,6 @@ class MyMetaLearner(MetaLearner):
                     self.timer.query_time_by_name("train backward", 
                         method=lambda x:mean(x[-10:])),
                 ))
-                # if best_acc < acc:
-                #     best_train_param = pickle.dumps(self.model.state_dict())
-                #     best_acc = acc
             
             # eval loop
             with torch.no_grad():
@@ -277,23 +264,20 @@ class MyMetaLearner(MetaLearner):
                 acc_valid /= len(valid_task)
                 LOGGER.info("epoch %2d valid mean acc %.6f" % (total_epoch, 
                     acc_valid))
-            
-            if best_valid < acc_valid:
-                second_best_valid = best_valid
-                second_best_param = best_param
-
-                best_valid = acc_valid
+                    
+            if acc_valid > best_valid:
                 # save the best model
-                best_param = pickle.dumps(self.model.state_dict())                        
+                best_param = pickle.dumps(self.model.state_dict())
+                best_valid = acc_valid
+                torch.save(self.model.state_dict(), 'contrastive_pretrained_seresnet50_' + str(best_valid) + '.pt')
 
         self.model.load_state_dict(pickle.loads(best_param))
-        self.model2.load_state_dict(pickle.loads(second_best_param))
-        self.model3.load_state_dict(torch.load('program/contrastive_pretrained_seresnet50_0.8828000000000001.pt'))
-        return MyLearner(self.model.cpu(), self.model2.cpu(), self.model3.cpu())
+        torch.save(self.model.state_dict(), 'contrastive_pretrained_seresnet50_' + str(best_valid) + '.pt')
+        return MyLearner(self.model.cpu())
 
 class MyLearner(Learner):
 
-    def __init__(self, model: Wrapper = None, model2: Wrapper = None, model3: Wrapper = None) -> None:
+    def __init__(self, model: Wrapper = None) -> None:
         """ Defines the learner initialization.
         
         Args:
@@ -302,10 +286,8 @@ class MyLearner(Learner):
         """
         super().__init__()
         self.model = model
-        self.model2 = model2
-        self.model3 = model3
 
-    @torch.no_grad()
+    #@torch.no_grad()
     def fit(self, support_set: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, 
                                int, int]) -> Predictor:
         """ Fit the Learner to the support set of a new unseen task. 
@@ -326,13 +308,42 @@ class MyLearner(Learner):
             Predictor: The resulting predictor ready to predict unlabelled 
                 query image examples from new unseen tasks.
         """
+        print('Meta-tuning on support')
         self.model.to(DEVICE)
-        self.model2.to(DEVICE)
-        self.model3.to(DEVICE)
         X_train, y_train, _, n, k = support_set
         X_train, y_train = X_train, y_train
+
+        # aug_x = augment(X_train)
+        # aug_y = torch.clone(y_train).detach()
+        # print(X_train.shape, aug_x.shape, y_train.shape, aug_y.shape)
+        # X_train = torch.cat((X_train, aug_x))
+        # y_train = torch.cat((y_train, aug_y))
+        # print(X_train.shape, aug_x.shape, y_train.shape, aug_y.shape)
+
+        backbone_parameters = []
+        backbone_parameters.extend(self.model.set_get_trainable_parameters([3, 
+            4]))
+        # set learnable layers
+        self.model.set_learnable_layers([3, 4])
+        opt = optim.Adam(
+            [
+                {"params": backbone_parameters}
+            ], lr=3e-4
+        )
+
+        for i in range(10):
+            #print(X_train.shape)
+            opt.zero_grad()
+            feature = self.model(X_train.to(DEVICE))
+            loss_func = losses.TripletMarginLoss()
+            miner = miners.MultiSimilarityMiner()
+            hard_pairs = miner(feature, y_train)
+            contrastive_loss = loss_func(feature, y_train, hard_pairs)
+            print('i:', i, 'contrasive loss', contrastive_loss)
+            contrastive_loss.backward()
+            opt.step()
         
-        return MyPredictor(self.model, self.model2, self.model3, X_train, y_train, n, k)
+        return MyPredictor(self.model, X_train, y_train, n, k)
 
     def save(self, path_to_save: str) -> None:
         """ Saves the learning object associated to the Learner. 
@@ -341,9 +352,6 @@ class MyLearner(Learner):
             path_to_save (str): Path where the learning object will be saved.
         """
         torch.save(self.model, os.path.join(path_to_save, "model.pt"))
-        torch.save(self.model2, os.path.join(path_to_save, "model2.pt"))
-        torch.save(self.model3, os.path.join(path_to_save, "model3.pt"))
-
  
     def load(self, path_to_load: str) -> None:
         """ Loads the learning object associated to the Learner. It should 
@@ -353,20 +361,12 @@ class MyLearner(Learner):
             path_to_load (str): Path where the Learner is saved.
         """
         if self.model is None:
-            self.model = torch.load(os.path.join(path_to_load, 'model.pt'))
-        if self.model2 is None:
-            self.model2 = torch.load(os.path.join(path_to_load, 'model2.pt'))
-        if self.model3 is None:
-            self.model3 = torch.load(os.path.join(path_to_load, 'model3.pt'))
-
-    
+            self.model = torch.load(os.path.join(path_to_load, 'model.pt'))   
     
 class MyPredictor(Predictor):
 
     def __init__(self, 
                  model: Wrapper, 
-                 model2 : Wrapper,
-                 model3 : Wrapper,
                  supp_x: torch.Tensor, 
                  supp_y: torch.Tensor, 
                  n: int, 
@@ -382,8 +382,6 @@ class MyPredictor(Predictor):
         """
         super().__init__()
         self.model = model
-        self.model2 = model2
-        self.model3 = model3
         self.other = [supp_x, supp_y, n, k]
 
     @torch.no_grad()
@@ -407,39 +405,30 @@ class MyPredictor(Predictor):
         """
         query_set = query_set
         supp_x, supp_y, n, k = self.other
+
+        ## NO NEED TO AUGMENT IF ALREADY AUGMENTING IN FIT   
+        aug_x = augment(supp_x)
+        aug_y = torch.clone(supp_y).detach()
+        #print(supp_x.shape, aug_x.shape, supp_y.shape, aug_y.shape)
+        supp_x = torch.cat((supp_x, aug_x))
+        supp_y = torch.cat((supp_y, aug_y))
+        #print(supp_x.shape, aug_x.shape, supp_y.shape, aug_y.shape)
+        
         supp_x = supp_x[supp_y.sort()[1]]
-        supp_y_sorted, _ = supp_y.sort()
         end = supp_x.size(0)
         # to avoid too much gpu memory cost
         x = torch.cat([supp_x, query_set])
         begin_idx = 0
-        xs1 = []
-        xs2 = []
-        xs3= []
+        xs = []
+        begin = time.time()
         while begin_idx < x.size(0):
-            xs1.append(self.model(x[begin_idx: begin_idx + 64].to(
-                DEVICE)).cpu())
-            xs2.append(self.model2(x[begin_idx: begin_idx + 64].to(
-                DEVICE)).cpu())
-            xs3.append(self.model3(x[begin_idx: begin_idx + 64].to(
+            xs.append(self.model(x[begin_idx: begin_idx + 64].to(
                 DEVICE)).cpu())
             begin_idx += 64
-
-        x1 = torch.cat(xs1)
-        x2 = torch.cat(xs2)
-        x3 = torch.cat(xs3)
-
-        x = torch.cat((x1, x2, x3), 1)
-
-        x = torch.nn.functional.normalize(x, dim=1)
-
-        self_optimal = SOT(distance_metric='cosine') 
-        x = self_optimal(x.to(DEVICE), y_support=supp_y_sorted.to(DEVICE))
-
+        print('time:', time.time() - begin)    
+        x = torch.cat(xs)
+        
         supp_x, quer_x = x[:end], x[end:]
-
-        supp_x = supp_x.view(n, k, supp_x.size(-1))
-        out = decode_label(supp_x, quer_x).cpu().numpy()
-
-        return (out)
-
+        supp_x = supp_x.view(n, 2*k, supp_x.size(-1))
+        #print(supp_x.shape, quer_x.shape) #(n,k,2048), (140, 2048)
+        return decode_label(supp_x, quer_x).cpu().numpy()
