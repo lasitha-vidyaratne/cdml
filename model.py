@@ -1,8 +1,10 @@
-""" This baseline is an implementation of the Prototypical Networks introduced 
-by J. Snell et al. 2017 (https://arxiv.org/pdf/1703.05175). The network 
-initilization at meta-training time can be with:
-1. Random weights (Meta-learning league)
-2. Pretrained weights (Free-style league)
+""" This method is adopted from the protonet baseline provided for Neurips challenge Cross-Domain MetaDL 2022: 
+https://github.com/DustinCarrion/cd-metadl/tree/8c6128120ab8aac331c958b2965d42747d9dbdeb
+
+The original source is "Prototypical Networks" introduced 
+by J. Snell et al. 2017 (https://arxiv.org/pdf/1703.05175). 
+
+This is used for the meta-learning league (random weights) in Cross-Domain MetaDL 2022 challenge 
 """
 import os
 import random
