@@ -45,14 +45,12 @@ try:
 except:
     os.system("pip install timm")
 
-# try: 
-#     import pytorch_metric_learning
-# except:
-#     os.system("pip install pytorch-metric-learning")
-# print('Installs done')
+try: 
+    import pytorch_metric_learning
+except:
+    os.system("pip install pytorch-metric-learning")
 from utils import  get_logger, timer, resize_tensor, augment, decode_label, mean
 from self_optimal_transport import SOT
-# print('Utils done')
 from api import MetaLearner, Learner, Predictor
 from backbone import MLP, rn_timm_mix, Wrapper
 from torch import optim
@@ -201,7 +199,6 @@ class MyMetaLearner(MetaLearner):
         best_param = pickle.dumps(self.model.state_dict())
         initial_param = pickle.dumps(self.model.state_dict())
         second_best_param = pickle.dumps(self.model.state_dict())
-        # best_train_param = pickle.dumps(self.model.state_dict())
         best_acc = 0
 
         self.cls.train()
@@ -258,10 +255,7 @@ class MyMetaLearner(MetaLearner):
                     self.timer.query_time_by_name("train backward", 
                         method=lambda x:mean(x[-10:])),
                 ))
-                # if best_acc < acc:
-                #     best_train_param = pickle.dumps(self.model.state_dict())
-                #     best_acc = acc
-            
+                
             # eval loop
             with torch.no_grad():
                 self.model.set_mode(False)
