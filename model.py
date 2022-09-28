@@ -1,9 +1,13 @@
-""" This baseline is borrowed from MetaDelta++: Improve Generalization
+""" This implimentation is adapted from the MetaDelta baseline 
+provided for Neurips challenge Cross-Domain MetaDL 2022: 
+https://github.com/DustinCarrion/cd-metadl/tree/8c6128120ab8aac331c958b2965d42747d9dbdeb
+
+The original version is MetaDelta++: Improve Generalization
 of Few-shot System Through Multi-Scale Pretrained Models and Improved 
 Training Strategies introduced by Chen & Guan & Wei et al. 2021.
 (https://arxiv.org/abs/2102.10744)
 
-Adopted from https://github.com/Frozenmad/MetaDelta
+Adapted from https://github.com/Frozenmad/MetaDelta
 """
 import pickle
 import time
@@ -424,11 +428,10 @@ class MyPredictor(Predictor):
         x1 = torch.cat(xs1)
         x2 = torch.cat(xs2)
         x3 = torch.cat(xs3)
-        # x = (x1 + x2)/2
+
         x = torch.cat((x1, x2, x3), 1)
 
         x = torch.nn.functional.normalize(x, dim=1)
-        # x = whiten(x)
 
         self_optimal = SOT(distance_metric='cosine') 
         x = self_optimal(x.to(DEVICE), y_support=supp_y_sorted.to(DEVICE))
