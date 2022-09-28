@@ -193,9 +193,6 @@ class MyMetaLearner(MetaLearner):
         best_valid = acc_valid
         best_param = pickle.dumps(self.model.state_dict())
 
-        #best_loss = 100
-        #best_param = pickle.dumps(self.model.state_dict())
-
         self.cls.train()
         while self.timer.time_left() > 60 * 5:
             # train loop
@@ -313,13 +310,6 @@ class MyLearner(Learner):
         X_train, y_train, _, n, k = support_set
         X_train, y_train = X_train, y_train
 
-        # aug_x = augment(X_train)
-        # aug_y = torch.clone(y_train).detach()
-        # print(X_train.shape, aug_x.shape, y_train.shape, aug_y.shape)
-        # X_train = torch.cat((X_train, aug_x))
-        # y_train = torch.cat((y_train, aug_y))
-        # print(X_train.shape, aug_x.shape, y_train.shape, aug_y.shape)
-
         backbone_parameters = []
         backbone_parameters.extend(self.model.set_get_trainable_parameters([3, 
             4]))
@@ -409,10 +399,8 @@ class MyPredictor(Predictor):
         ## NO NEED TO AUGMENT IF ALREADY AUGMENTING IN FIT   
         aug_x = augment(supp_x)
         aug_y = torch.clone(supp_y).detach()
-        #print(supp_x.shape, aug_x.shape, supp_y.shape, aug_y.shape)
         supp_x = torch.cat((supp_x, aug_x))
         supp_y = torch.cat((supp_y, aug_y))
-        #print(supp_x.shape, aug_x.shape, supp_y.shape, aug_y.shape)
         
         supp_x = supp_x[supp_y.sort()[1]]
         end = supp_x.size(0)
@@ -430,5 +418,4 @@ class MyPredictor(Predictor):
         
         supp_x, quer_x = x[:end], x[end:]
         supp_x = supp_x.view(n, 2*k, supp_x.size(-1))
-        #print(supp_x.shape, quer_x.shape) #(n,k,2048), (140, 2048)
         return decode_label(supp_x, quer_x).cpu().numpy()
