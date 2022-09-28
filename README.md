@@ -14,3 +14,8 @@ python -m cdmetadl.run --input_data_dir=public_data --submission_dir=path/to/thi
 ```
 
 Remember to replace the `path/to/cd-metadl` and `path/to/this/folder` to your settings.
+
+## Notes on repository branches:
+The cdml (default) branch consist of the code to train the model using publicly available online pre-trained models as well as a pre-trained model that was trained offline on Set 0 (named model3) in the code. Please reach out to us if you would like to have access to the trained model weights for model3. Alternatively, model3 can also be trained by from scratch by running the code in the branch: backbone_pretraining_cdml. 
+
+The cdml_2 branch consist of the code to train the model from scratch without using any pre-trained model for the meta-learning league.
