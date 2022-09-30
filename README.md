@@ -10,9 +10,9 @@ We have based our solution to the freestyle league on the general framework of t
 
 - **Ensemble backbones**: We fine-tune a pre-trained seresnet101aa (with anti aliasing) architecture using set 0 in the given meta-training time. We use snapshot ensembling to retain two versions of the seresnet101aa. Additionally, we also upload a resnet50 model trained offline on set 0.
 - **Contrastive loss**: We apply triple-margin loss in addition to the cross-entropy based classification loss when fine-tuning the backbone. 
-- **Self-Optimal-Transport**: In meta-classification stage, we apply the Self-Optimal-Transport (SOT) [3] feature transform to the ensemble sets of support and querry set features. SOT provides a mapping to the features that promotes downstream matching and grouping tasks. The implimentation is borrowed from [here](https://github.com/DanielShalam/SOT).
+- **Self-Optimal-Transport**: In meta-classification stage, we apply the Self-Optimal-Transport (SOT) [2] feature transform to the ensemble sets of support and querry set features. SOT provides a mapping to the features that promotes downstream matching and grouping tasks. The implimentation is borrowed from [here](https://github.com/DanielShalam/SOT).
 
-Our solution to the free-style league follows the protonet [2] framework, where we add contrastive loss in addition to the episodic loss when training the backbone.  
+Our solution to the free-style league follows the protonet [3] framework, where we add contrastive loss in addition to the episodic loss when training the backbone.  
 
 
 
@@ -38,5 +38,5 @@ The cdml_2 branch consist of the code to train the model from scratch without us
 
 ## references
 - [1] : [Chen, Yudong, Chaoyu Guan, Zhikun Wei, Xin Wang, and Wenwu Zhu. "Metadelta: A meta-learning system for few-shot image classification." In AAAI Workshop on Meta-Learning and MetaDL Challenge, pp. 17-28. PMLR, 2021](https://arxiv.org/abs/2102.10744)
-- [2] : [Snell, Jake, Kevin Swersky, and Richard Zemel. "Prototypical networks for few-shot learning." Advances in neural information processing systems 30 (2017)](https://proceedings.neurips.cc/paper/2017/file/cb8da6767461f2812ae4290eac7cbc42-Paper.pdf)
-- [3] : [Shalam, Daniel, and Simon Korman. "The Self-Optimal-Transport Feature Transform." arXiv preprint arXiv:2204.03065 (2022)](https://arxiv.org/abs/2204.03065)
+- [2] : [Shalam, Daniel, and Simon Korman. "The Self-Optimal-Transport Feature Transform." arXiv preprint arXiv:2204.03065 (2022)](https://arxiv.org/abs/2204.03065)
+- [3] : [Snell, Jake, Kevin Swersky, and Richard Zemel. "Prototypical networks for few-shot learning." Advances in neural information processing systems 30 (2017)](https://proceedings.neurips.cc/paper/2017/file/cb8da6767461f2812ae4290eac7cbc42-Paper.pdf)
