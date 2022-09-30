@@ -6,7 +6,7 @@ solution submitted to the [Cross-Domain MetaDL challenge](https://metalearning.c
 
 ## Description
 
-We have based our solution to the freestyle league on the general framework of the metadelta++ [1], the winnig solution in NeurIPS 2021 MetaDL competition. Additionally, our final model consists of the following:
+We have based our solution to the freestyle league on the general framework of the metadelta++ [1], the winning solution in NeurIPS 2021 MetaDL competition. Additionally, our final model consists of the following:
 
 - **Ensemble backbones**: We fine-tune a pre-trained seresnet101aa (with anti aliasing) architecture using set 0 in the given meta-training time. We use snapshot ensembling to retain two versions of the seresnet101aa. Additionally, we also upload a resnet50 model trained offline on set 0.
 - **Contrastive loss**: We apply triple-margin loss in addition to the cross-entropy based classification loss when fine-tuning the backbone. 
