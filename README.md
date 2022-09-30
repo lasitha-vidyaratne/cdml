@@ -2,7 +2,7 @@
 
 ## Overview
 
-solution submitted to the [Cross-Domain MetaDL challenge](https://metalearning.chalearn.org/) in [NeurIPS 2022 competition track](https://neurips.cc/Conferences/2022/CompetitionTrack).
+Solution submitted to the [Cross-Domain MetaDL challenge](https://metalearning.chalearn.org/) in [NeurIPS 2022 competition track](https://neurips.cc/Conferences/2022/CompetitionTrack).
 
 ## Description
 
